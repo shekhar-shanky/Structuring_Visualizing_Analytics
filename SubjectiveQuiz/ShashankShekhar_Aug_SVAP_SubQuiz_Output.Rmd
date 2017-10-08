@@ -1,0 +1,271 @@
+---
+title: "Movie Ratings"
+author: "Shashank Shekhar"
+date: "10/07/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+```
+
+## FRAME
+
+### Graph#1 : CEO : A diagram showing how the correlation between audience and critic ratings have evolved throughout the years by genre.
+### Graph#2 : Graph between Critic and Audience. 
+### Graph#3 : Which are the top 5 budget movie from Action genre?
+### Graph#4 : Yearly report on max budget in each genre category
+### Graph#5 : How many movies released every year in each genre category?
+### Graph#6 : Which are the top 5 movies from each genre who gets high critics and auditions rating?
+
+
+## ACQUIRE
+
+```{r}
+# Reading Data From **CSV** file
+getwd()
+mydata <- read.csv("Movie-Ratings.csv", header = TRUE)
+colnames(mydata) <- c('film','genre','criticRating','audienceRating','budget','year')
+str(mydata)
+
+```
+
+## REFINE
+```{r}
+# Data Conversion
+mydata$film <- as.character(mydata$film)
+mydata$genre <- as.character(mydata$genre)
+mydata$criticRating <- mydata$criticRating/100
+mydata$audienceRating <- mydata$audienceRating/100;
+str(mydata)
+dim(mydata)
+head(mydata)
+tail(mydata)
+
+# Data Check
+
+## Checking FILM column if there is any NA / NULL / NAN
+unique(is.na(mydata$film))
+unique(is.null(mydata$film))
+unique(is.nan(mydata$film))
+
+## Checking GENRE column if there is any NA / NULL / NAN
+unique(is.na(mydata$genre))
+unique(is.null(mydata$genre))
+unique(is.nan(mydata$genre))
+
+## Checking CRICTIC RATING column if there is any NA / NULL / NAN. Also the CRICTIC RATING cannot be negative or more than 100%
+unique(is.na(mydata$criticRating))
+unique(is.null(mydata$criticRating))
+unique(is.nan(mydata$criticRating))
+
+mydata %>%
+  filter(criticRating < 1) %>%
+  filter(criticRating < 0)
+
+## Checking AUDIENCE RATING column if there is any NA / NULL / NAN. Also the AUDIENCE RATING cannot be negative or more than 100%
+unique(is.na(mydata$audienceRating))
+unique(is.null(mydata$audienceRating))
+unique(is.nan(mydata$audienceRating))
+
+mydata %>%
+  filter(audienceRating > 1) %>%
+  filter(audienceRating < 0)
+
+## Checking BUDGET column if there is any NA / NULL / NAN. Also the BUDGET cannot be negative
+unique(is.na(mydata$budget))
+unique(is.null(mydata$budget))
+unique(is.nan(mydata$budget))
+
+mydata %>%
+  filter(budget < 0)
+
+## Checking YEAR column if there is any NA / NULL / NAN. Also year length is equal to 4
+unique(is.na(mydata$year))
+unique(is.null(mydata$year))
+unique(is.nan(mydata$year))
+
+mydata %>%
+  filter(nchar(year) != 4) 
+
+
+df <- mydata
+
+```
+
+## GRAPHS
+```{r}
+## Graph#1 : CEO : A diagram showing how the correlation between audience and critic ratings have evolved throughout the years by genre.
+ df %>%
+  group_by(year, genre) %>% 
+  summarise(corel = cor(audienceRating, criticRating))  %>%
+  ggplot(aes(year, corel, color=genre)) + 
+  geom_line() + 
+  xlab("Year") +
+  ylab("Correlation between Audience and Critic Rating")
+```
+```{r}
+## Graph#2 : Graph between Critic and Audience 
+df %>%
+  group_by(year) %>% 
+  ggplot(aes(criticRating, audienceRating, color=year)) +
+  geom_line() +
+  xlab("Critic Rating") +
+  ylab("Audience Rating")
+```
+```{r}
+#Graph#3 : Which are the top 5 budget movie from Action genre?
+df %>%
+  filter(genre == c("Action")) %>% 
+  arrange(desc(budget)) %>% 
+  head(5) %>% 
+  ggplot(aes(reorder(film, budget), budget, fill=budget)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("Film") + 
+  ylab("Budget")  +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  ggtitle("Genre : Action", subtitle = "Top 5 budget movie of all the time")
+
+
+```
+
+```{r}
+#Graph#4 : Yearly report on max budget in each genre category
+library(plotly)
+a <- df %>%
+  group_by(genre, year) %>%
+  summarise(total = sum(budget)) %>%
+  ggplot(aes(year, total, fill=genre)) + 
+  geom_bar(stat = "identity") +
+  xlab("Year") +
+  ylab("Budget") +
+  ggtitle("Yearly Report - Budget spent on Genre", subtitle = NULL)
+
+ggplotly(a)
+
+```
+
+
+```{r}
+#Graph#5 : How many movies released every year in each genre category?
+b <- df %>%
+  group_by(genre, year) %>%
+  summarise(total = sum(as.integer(as.factor(genre)))) %>%
+  ggplot(aes(year, total, fill=genre )) +
+  geom_bar(stat = "identity")  +
+  xlab("Year")  +
+  ylab("# Of Films")  +
+  ggtitle("# Of Films Each Year & By Genre", subtitle = "") 
+  
+ggplotly(b)
+```
+
+```{r}
+#Graph 6: Which are the top 5 movies from each genre who gets high critics and auditions rating?
+
+a1 <- df %>%
+  filter(genre == c("Comedy")) %>% 
+  arrange(desc(budget)) %>% 
+  head(5) %>% 
+  ggplot(aes(reorder(film, budget), budget, fill=budget)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("Film") + 
+  ylab("Budget")  +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  ggtitle("Genre : Comedy", subtitle = "Top 5 budget movie of all the time")
+
+a2 <- df %>%
+  filter(genre == c("Adventure")) %>% 
+  arrange(desc(budget)) %>% 
+  head(5) %>% 
+  ggplot(aes(reorder(film, budget), budget, fill=budget)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("Film") + 
+  ylab("Budget")  +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  ggtitle("Genre : Adventure", subtitle = "Top 5 budget movie of all the time")
+
+a3 <- df %>%
+  filter(genre == c("Action")) %>% 
+  arrange(desc(budget)) %>% 
+  head(5) %>% 
+  ggplot(aes(reorder(film, budget), budget, fill=budget)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("Film") + 
+  ylab("Budget")  +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  ggtitle("Genre : Action", subtitle = "Top 5 budget movie of all the time")
+
+a4 <- df %>%
+  filter(genre == c("Horror")) %>% 
+  arrange(desc(budget)) %>% 
+  head(5) %>% 
+  ggplot(aes(reorder(film, budget), budget, fill=budget)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("Film") + 
+  ylab("Budget")  +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  ggtitle("Genre : Horror", subtitle = "Top 5 budget movie of all the time")
+
+a5 <- df %>%
+  filter(genre == c("Drama")) %>% 
+  arrange(desc(budget)) %>% 
+  head(5) %>% 
+  ggplot(aes(reorder(film, budget), budget, fill=budget)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("Film") + 
+  ylab("Budget")  +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  ggtitle("Genre : Drama", subtitle = "Top 5 budget movie of all the time")
+
+a6 <- df %>%
+  filter(genre == c("Romance")) %>% 
+  arrange(desc(budget)) %>% 
+  head(5) %>% 
+  ggplot(aes(reorder(film, budget), budget, fill=budget)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("Film") + 
+  ylab("Budget")  +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  ggtitle("Genre : Romance", subtitle = "Top 5 budget movie of all the time")
+
+a7 <- df %>%
+  filter(genre == c("Thriller")) %>% 
+  arrange(desc(budget)) %>% 
+  head(5) %>% 
+  ggplot(aes(reorder(film, budget), budget, fill=budget)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  xlab("Film") + 
+  ylab("Budget")  +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  ggtitle("Genre : Thriller", subtitle = "Top 5 budget movie of all the time")
+
+grid.arrange(a1, a2)
+grid.arrange(a3, a4)
+grid.arrange(a5, a6)
+grid.arrange(a7, nrow=2)
+
+
+```
